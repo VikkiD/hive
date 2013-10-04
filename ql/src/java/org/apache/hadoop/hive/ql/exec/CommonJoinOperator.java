@@ -128,6 +128,13 @@ public abstract class CommonJoinOperator<T extends JoinDesc> extends
   }
 
   public CommonJoinOperator(CommonJoinOperator<T> clone) {
+
+    try {
+      throw new Exception("XXX: COMMON JOIN OP CLONE");
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
     this.joinEmitInterval = clone.joinEmitInterval;
     this.joinCacheSize = clone.joinCacheSize;
     this.nextSz = clone.nextSz;
@@ -830,7 +837,7 @@ public abstract class CommonJoinOperator<T extends JoinDesc> extends
           maxSize = size;
         }
       }
-      
+
       stats.setNumberOfBytes(maxSize*this.getParentOperators().size());
       this.getConf().setStatistics(stats);
     }

@@ -18,13 +18,10 @@
 
 package org.apache.hadoop.hive.ql.exec;
 
-<<<<<<< HEAD
-=======
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
->>>>>>> HIVE-map join build hashmap
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Map;
