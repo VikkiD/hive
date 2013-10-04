@@ -18,8 +18,16 @@
 
 package org.apache.hadoop.hive.ql.exec;
 
+<<<<<<< HEAD
+=======
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+>>>>>>> HIVE-map join build hashmap
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,6 +38,7 @@ import org.apache.hadoop.hive.ql.exec.persistence.MapJoinObjectSerDeContext;
 import org.apache.hadoop.hive.ql.exec.persistence.MapJoinRowContainer;
 import org.apache.hadoop.hive.ql.exec.persistence.MapJoinTableContainer;
 import org.apache.hadoop.hive.ql.exec.persistence.MapJoinTableContainerSerDe;
+import org.apache.hadoop.hive.ql.exec.tez.TezProcessor;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.MapJoinDesc;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
@@ -37,6 +46,7 @@ import org.apache.hadoop.hive.ql.plan.api.OperatorType;
 import org.apache.hadoop.hive.serde2.SerDe;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.tez.runtime.api.LogicalInput;
 
 /**
  * Map side Join operator implementation.
@@ -124,6 +134,30 @@ public class MapJoinOperator extends AbstractMapJoinOperator<MapJoinDesc> implem
     }
   }
 
+  private void loadHashTable(Map<String, LogicalInput> inputs) throws HiveException {
+
+    //FIXME the input needs to be mapped to corresponding op
+    for (int pos = 0; pos < mapJoinTables.length; pos++) {
+      if (pos == posBigTable) {
+        System.out.println("XXX: Input was big table pos: " + posBigTable);
+        continue;
+      }
+
+      System.out.println("XXX: Going to load small table for position: " + pos);
+      LogicalInput input = inputs.get(conf.getParentToInput().get(pos));
+
+      try {
+        mapJoinTables[pos] = mapJoinTableSerdes[pos].load(input);
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      } catch (SerDeException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
+  }
+
   private void loadHashTable() throws HiveException {
 
     if (!this.getExecContext().getLocalWork().getInputFileChangeSensitive()) {
@@ -143,13 +177,14 @@ public class MapJoinOperator extends AbstractMapJoinOperator<MapJoinDesc> implem
   // Load the hash table
   @Override
   public void cleanUpInputFileChangedOp() throws HiveException {
+    System.out.println("XXX: We are going to be loading the hash map");
     try {
       if (firstRow) {
         // generate the map metadata
         generateMapMetaData();
         firstRow = false;
       }
-      loadHashTable();
+      loadHashTable(TezProcessor.inputs);
     } catch (SerDeException e) {
       throw new HiveException(e);
     }

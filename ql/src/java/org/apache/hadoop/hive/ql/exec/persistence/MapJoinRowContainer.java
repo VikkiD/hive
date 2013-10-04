@@ -37,7 +37,7 @@ import org.apache.hadoop.io.Writable;
 @SuppressWarnings("deprecation")
 public class MapJoinRowContainer extends AbstractRowContainer<List<Object>> {
   private static final Object[] EMPTY_OBJECT_ARRAY = new Object[0];
-  
+
   private final List<List<Object>> list;
   private int index;
   private byte aliasFilter = (byte) 0xff;
@@ -45,7 +45,7 @@ public class MapJoinRowContainer extends AbstractRowContainer<List<Object>> {
   public MapJoinRowContainer() {
     index = 0;
     list = new ArrayList<List<Object>>(1);
-  } 
+  }
 
   @Override
   public void add(List<Object> t) {
@@ -92,11 +92,11 @@ public class MapJoinRowContainer extends AbstractRowContainer<List<Object>> {
     list.clear();
     index = 0;
   }
-  
+
   public byte getAliasFilter() {
     return aliasFilter;
   }
-  
+
   public MapJoinRowContainer copy() {
     MapJoinRowContainer result = new MapJoinRowContainer();
     for(List<Object> item : list) {
@@ -104,15 +104,15 @@ public class MapJoinRowContainer extends AbstractRowContainer<List<Object>> {
     }
     return result;
   }
-  
+
   @SuppressWarnings({"unchecked"})
-  public void read(MapJoinObjectSerDeContext context, ObjectInputStream in, Writable container) 
+  public void read(MapJoinObjectSerDeContext context, ObjectInputStream in, Writable container)
   throws IOException, SerDeException {
     clear();
     SerDe serde = context.getSerDe();
     long numRows = in.readLong();
     for (long rowIndex = 0L; rowIndex < numRows; rowIndex++) {
-      container.readFields(in);      
+      container.readFields(in);
       List<Object> value = (List<Object>)ObjectInspectorUtils.copyToStandardObject(serde.deserialize(container),
           serde.getObjectInspector(), ObjectInspectorCopyOption.WRITABLE);
       if(value == null) {
@@ -126,8 +126,24 @@ public class MapJoinRowContainer extends AbstractRowContainer<List<Object>> {
       }
     }
   }
-  
-  public void write(MapJoinObjectSerDeContext context, ObjectOutputStream out) 
+
+  public void read(MapJoinObjectSerDeContext context, Writable currentValue) throws SerDeException {
+    // TODO Auto-generated method stub
+    SerDe serde = context.getSerDe();
+    List<Object> value = (List<Object>)ObjectInspectorUtils.copyToStandardObject(serde.deserialize(currentValue),
+        serde.getObjectInspector(), ObjectInspectorCopyOption.WRITABLE);
+    if(value == null) {
+      add(toList(EMPTY_OBJECT_ARRAY));
+    } else {
+      Object[] valuesArray = value.toArray();
+      if (context.hasFilterTag()) {
+        aliasFilter &= ((ShortWritable)valuesArray[valuesArray.length - 1]).get();
+      }
+      add(toList(valuesArray));
+    }
+  }
+
+  public void write(MapJoinObjectSerDeContext context, ObjectOutputStream out)
   throws IOException, SerDeException {
     SerDe serde = context.getSerDe();
     ObjectInspector valueObjectInspector = context.getStandardOI();
@@ -136,7 +152,7 @@ public class MapJoinRowContainer extends AbstractRowContainer<List<Object>> {
     out.writeLong(numRows);
     for (List<Object> row = first(); row != null; row = next()) {
       serde.serialize(row.toArray(), valueObjectInspector).write(out);
-      ++numRowsWritten;      
+      ++numRowsWritten;
     }
     if(numRows != size()) {
       throw new ConcurrentModificationException("Values was modifified while persisting");
@@ -145,7 +161,7 @@ public class MapJoinRowContainer extends AbstractRowContainer<List<Object>> {
       throw new IllegalStateException("Expected to write " + numRows + " but wrote " + numRowsWritten);
     }
   }
-  
+
   private List<Object> toList(Object[] array) {
     return new NoCopyingArrayList(array);
   }
@@ -154,7 +170,7 @@ public class MapJoinRowContainer extends AbstractRowContainer<List<Object>> {
    * so we don't care about copying in and out.
    */
   private static class NoCopyingArrayList extends AbstractList<Object> {
-    private Object[] array;
+    private final Object[] array;
     public NoCopyingArrayList(Object[] array) {
       this.array = array;
     }
@@ -167,9 +183,10 @@ public class MapJoinRowContainer extends AbstractRowContainer<List<Object>> {
     public int size() {
       return array.length;
     }
-    
+
+    @Override
     public Object[] toArray() {
       return array;
-    }    
+    }
   }
 }

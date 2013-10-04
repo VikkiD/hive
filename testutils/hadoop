@@ -104,6 +104,7 @@ shift
 
 #make sure security appender is turned off
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
+HADOOP_OPTS=" -Xdebug -Xrunjdwp:transport=dt_socket,address=12345,server=y,suspend=y $HADOOP_OPTS"
 
 export CLASSPATH=$CLASSPATH
 exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS $CLASS "$@"

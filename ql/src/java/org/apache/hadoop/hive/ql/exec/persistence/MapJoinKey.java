@@ -36,7 +36,7 @@ public class MapJoinKey {
   private static final Object[] EMPTY_OBJECT_ARRAY = new Object[0];
 
   private Object[] key;
-  
+
   public MapJoinKey(Object[] key) {
     this.key = key;
   }
@@ -57,8 +57,8 @@ public class MapJoinKey {
     }
     return false;
   }
-  
-  
+
+
   @Override
   public int hashCode() {
     final int prime = 31;
@@ -68,19 +68,23 @@ public class MapJoinKey {
   }
   @Override
   public boolean equals(Object obj) {
-    if (this == obj)
+    if (this == obj) {
       return true;
-    if (obj == null)
+    }
+    if (obj == null) {
       return false;
-    if (getClass() != obj.getClass())
+    }
+    if (getClass() != obj.getClass()) {
       return false;
+    }
     MapJoinKey other = (MapJoinKey) obj;
-    if (!Arrays.equals(key, other.key))
+    if (!Arrays.equals(key, other.key)) {
       return false;
+    }
     return true;
   }
   @SuppressWarnings("unchecked")
-  public void read(MapJoinObjectSerDeContext context, ObjectInputStream in, Writable container) 
+  public void read(MapJoinObjectSerDeContext context, ObjectInputStream in, Writable container)
   throws IOException, SerDeException {
     SerDe serde = context.getSerDe();
     container.readFields(in);
@@ -92,8 +96,21 @@ public class MapJoinKey {
       key = value.toArray();
     }
   }
-  
-  public void write(MapJoinObjectSerDeContext context, ObjectOutputStream out) 
+
+  public void read(MapJoinObjectSerDeContext context, Writable container) throws SerDeException {
+    SerDe serde = context.getSerDe();
+    Writable incoming = null;
+    List<Object> value = (List<Object>)ObjectInspectorUtils.copyToStandardObject(serde.deserialize(container),
+        serde.getObjectInspector(), ObjectInspectorCopyOption.WRITABLE);
+
+    if(value == null) {
+      key = EMPTY_OBJECT_ARRAY;
+    } else {
+      key = value.toArray();
+    }
+  }
+
+  public void write(MapJoinObjectSerDeContext context, ObjectOutputStream out)
   throws IOException, SerDeException {
     SerDe serde = context.getSerDe();
     ObjectInspector objectInspector = context.getStandardOI();

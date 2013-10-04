@@ -46,7 +46,8 @@ public class TezProcessor implements LogicalIOProcessor {
 
   private JobConf jobConf;
 
-  private TezProcessorContext processorContext;
+  public static TezProcessorContext processorContext;
+  public static Map<String, LogicalInput> inputs;
 
   public TezProcessor(boolean isMap) {
     this.isMap = isMap;
@@ -81,6 +82,7 @@ public class TezProcessor implements LogicalIOProcessor {
     // (possibly asynchronously)
 
     LOG.info("Running map: " + processorContext.getUniqueIdentifier());
+    this.inputs = inputs;
 
     if(outputs.size() > 1) {
           throw new IOException("Cannot handle more than one output"

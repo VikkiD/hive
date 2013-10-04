@@ -29,10 +29,13 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.serde2.SerDe;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.io.Writable;
+import org.apache.tez.mapreduce.input.MRInput;
+import org.apache.tez.runtime.api.LogicalInput;
+import org.apache.tez.runtime.library.api.KeyValueReader;
 
 @SuppressWarnings("deprecation")
 public class MapJoinTableContainerSerDe {
-  
+
   private final MapJoinObjectSerDeContext keyContext;
   private final MapJoinObjectSerDeContext valueContext;
   public MapJoinTableContainerSerDe(MapJoinObjectSerDeContext keyContext,
@@ -41,7 +44,7 @@ public class MapJoinTableContainerSerDe {
     this.valueContext = valueContext;
   }
   @SuppressWarnings({"unchecked"})
-  public MapJoinTableContainer load(ObjectInputStream in) 
+  public MapJoinTableContainer load(ObjectInputStream in)
       throws HiveException {
     SerDe keySerDe = keyContext.getSerDe();
     SerDe valueSerDe = valueContext.getSerDe();
@@ -49,7 +52,7 @@ public class MapJoinTableContainerSerDe {
     try {
       String name = in.readUTF();
       Map<String, String> metaData = (Map<String, String>) in.readObject();
-      tableContainer = create(name, metaData);      
+      tableContainer = create(name, metaData);
     } catch (IOException e) {
       throw new HiveException("IO error while trying to create table container", e);
     } catch (ClassNotFoundException e) {
@@ -57,7 +60,7 @@ public class MapJoinTableContainerSerDe {
     }
     try {
       Writable keyContainer = keySerDe.getSerializedClass().newInstance();
-      Writable valueContainer = valueSerDe.getSerializedClass().newInstance();    
+      Writable valueContainer = valueSerDe.getSerializedClass().newInstance();
       int numKeys = in.readInt();
       for (int keyIndex = 0; keyIndex < numKeys; keyIndex++) {
         MapJoinKey key = new MapJoinKey();
@@ -73,10 +76,31 @@ public class MapJoinTableContainerSerDe {
       throw new HiveException("Error while trying to create table container", e);
     }
   }
+
+  public MapJoinTableContainer load(LogicalInput input) throws IOException, SerDeException {
+
+    System.out.println("XXX: Loading a logical input");
+
+    MRInput in = (MRInput) input;
+    KeyValueReader kvReader = in.getReader();
+
+    MapJoinTableContainer tableContainer = new HashMapWrapper(100000, 0.75f);
+
+    while (kvReader.next()) {
+      MapJoinKey key = new MapJoinKey();
+      key.read(keyContext, (Writable)kvReader.getCurrentKey());
+      MapJoinRowContainer values = new MapJoinRowContainer();
+      values.read(valueContext, (Writable)kvReader.getCurrentValue());
+      tableContainer.put(key, values);
+    }
+
+    return tableContainer;
+  }
+
   public void persist(ObjectOutputStream out, MapJoinTableContainer tableContainer)
       throws HiveException {
     int numKeys = tableContainer.size();
-    try { 
+    try {
       out.writeUTF(tableContainer.getClass().getName());
       out.writeObject(tableContainer.getMetaData());
       out.writeInt(numKeys);
@@ -95,14 +119,14 @@ public class MapJoinTableContainerSerDe {
       throw new ConcurrentModificationException("TableContainer was modified while persisting: " + tableContainer);
     }
   }
-  
+
   public static void persistDummyTable(ObjectOutputStream out) throws IOException {
     MapJoinTableContainer tableContainer = new HashMapWrapper();
     out.writeUTF(tableContainer.getClass().getName());
     out.writeObject(tableContainer.getMetaData());
     out.writeInt(tableContainer.size());
   }
-  
+
   private MapJoinTableContainer create(String name, Map<String, String> metaData) throws HiveException {
     try {
       @SuppressWarnings("unchecked")

@@ -124,10 +124,14 @@ public class MapRecordProcessor  extends RecordProcessor{
 
   @Override
   void run() throws IOException{
+
+    /*
+    // FIXME
     if (inputs.size() != 1) {
       throw new IllegalArgumentException("MapRecordProcessor expects single input"
           + ", inputCount=" + inputs.size());
     }
+    */
 
     MRInput in = getMRInput(inputs);
     KeyValueReader reader = in.getReader();
