@@ -77,6 +77,18 @@ public class MapJoinOperator extends AbstractMapJoinOperator<MapJoinDesc> implem
 
   @Override
   protected void initializeOp(Configuration hconf) throws HiveException {
+    int i = 0;
+    for (TableDesc tableDesc : this.getConf().getValueTblDescs()) {
+      Deserializer serde;
+      try {
+        serde = tableDesc.getDeserializerClass().newInstance();
+        serde.initialize(hconf, tableDesc.getProperties());
+        ObjectInspector objInspector = serde.getObjectInspector();
+        this.initialize(hconf, objInspector, i++);
+      } catch (Exception e) {
+        throw new HiveException(e);
+      }
+    }
     super.initializeOp(hconf);
 
     int tagLen = conf.getTagLength();
